@@ -1,9 +1,7 @@
 name: Tests
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '*/5 * * * *'
+  workflow_dispatch: # We get rid of the buggy 'schedule: cron' entirely!
 
 jobs:
   tests:
@@ -43,13 +41,10 @@ jobs:
       - name: Run Instance Provisioner
         id: provisioner
         run: |
-          # Run the script and save the output to a text file
           php index.php > output.txt
           cat output.txt
           
-          # Check if the output contains an IP address string
           if grep -q "publicIp" output.txt || grep -q "ipAddress" output.txt; then
-            # Extract the raw IP address using grep regex filter
             IP_ADDR=$(grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' output.txt | head -n 1)
             echo "SERVER_IP=$IP_ADDR" >> $GITHUB_ENV
             echo "STATUS=CREATED" >> $GITHUB_ENV
@@ -78,3 +73,16 @@ jobs:
                -X POST \
                -d "{\"content\": \"🎉 **SERVER CREATED SUCCESSFULLY IN FRANKFURT!**\n\n🌐 **IP Address:** \`${{ env.SERVER_IP }}\`\n👤 **Username:** \`opc\` *(or \`ubuntu\` if using Ubuntu image)*\n\n🚀 **SSH Login Command:**\n\`ssh -i C:\\\\Users\\\\Victus\\\\.ssh\\\\oci_key opc@${{ env.SERVER_IP }}\`\"}" \
                ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      # NEW STEP: IF OUT OF CAPACITY, WAIT 5 MINUTES, THEN TRIGGER THE NEXT RUN AUTOMATICALLY
+      - name: Precision Delay and Self-Chain Trigger
+        if: env.STATUS == 'OUT_OF_CAPACITY'
+        run: |
+          echo "⏳ Waiting exactly 5 minutes before queuing the next attempt..."
+          sleep 300
+          echo "🚀 Triggering the next execution run now..."
+          curl -X POST \
+               -H "Authorization: token ${{ secrets.GH_PAT }}" \
+               -H "Accept: application/vnd.github.v3+json" \
+               https://github.com \
+               -d '{"ref":"main"}'
