@@ -40,9 +40,10 @@ jobs:
         run: |
           echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci_api_key.pem
 
-      - name: Run test suite
+      # CHANGED: Runs the actual production loop code instead of test validations
+      - name: Run Instance Provisioner
         run: |
-          vendor/bin/phpunit --color tests/
+          php index.php
         env:
           OCI_REGION: ${{ secrets.OCI_REGION }}
           OCI_USER_ID: ${{ secrets.OCI_USER_ID }}
@@ -57,5 +58,3 @@ jobs:
           OCI_SHAPE: ${{ secrets.OCI_SHAPE }}
           OCI_MAX_INSTANCES: ${{ secrets.OCI_MAX_INSTANCES }}
           OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
-          TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
-          TELEGRAM_BOT_API_KEY: ${{ secrets.TELEGRAM_BOT_API_KEY }}
